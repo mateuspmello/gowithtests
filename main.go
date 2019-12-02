@@ -1,28 +1,22 @@
 package main
 
 import (
-	"os"
-	"time"
+	"log"
+	"net/http"
 
-	"github.com/mateuspmello/testes/mocking"
+	"github.com/mateuspmello/testes/app"
 )
 
-type DefaultSleeper struct{}
+type InMemoryPlayerStore struct{}
 
-func (d *DefaultSleeper) Sleep() {
-	time.Sleep(1 * time.Second)
+func (i *InMemoryPlayerStore) GetPlayerValue(name string) int {
+	return 123
 }
 
-// func Greet(writer io.Writer, name string) {
-// 	fmt.Fprintf(writer, "Hello, %s", name)
-// }
-
-// func MyGreeterHandler(w http.ResponseWriter, r *http.Request) {
-// 	Greet(w, "world")
-// }
-
 func main() {
-	// http.ListenAndServe(":5000", http.HandlerFunc(MyGreeterHandler))
-	sleeper := &DefaultSleeper{}
-	mocking.Contagem(os.Stdout, sleeper)
+	server := &app.PlayerServer{&InMemoryPlayerStore{nil, nil}}
+
+	if err := http.ListenAndServe(":5000", server); err != nil {
+		log.Fatalf("could not listen on port 5000 %v", err)
+	}
 }
