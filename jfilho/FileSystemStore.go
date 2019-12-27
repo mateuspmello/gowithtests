@@ -3,39 +3,58 @@ package jfilho
 import (
 	"encoding/json"
 	"io"
+	"os"
+	"sort"
 )
 
 //FileSystemPlayerStore sera a base de dados
 type FileSystemPlayerStore struct {
-	db io.ReadWriteSeeker
+	database *json.Encoder
+	league   League
 }
 
-//GetLeague obtem a liga (conjunto de jogadores)
+//ReadWriteSeekTruncate é uma interface para ajudar a capturar requisitos
+type ReadWriteSeekTruncate interface {
+	io.ReadWriteSeeker
+	Truncate(size int64) error
+}
+
+//NewFileSystemPlayerStore retorna a nova liga
+func NewFileSystemPlayerStore(file *os.File) *FileSystemPlayerStore {
+	file.Seek(0, 0)
+	league, _ := NewLeague(file)
+	return &FileSystemPlayerStore{
+		database: json.NewEncoder(&tape{file}),
+		league:   league,
+	}
+}
+
+//GetLeague obtem a liga
 func (f *FileSystemPlayerStore) GetLeague() League {
-	f.db.Seek(0, 0)
-	league, _ := NewLeague(f.db)
-	return league
+	sort.Slice(f.league, func(i, j int) bool {
+		return f.league[i].Wins > f.league[j].Wins
+	})
+
+	return f.league
 }
 
 //GetPlayerScore obtem o score de um jogador baseado no nome
 func (f *FileSystemPlayerStore) GetPlayerScore(name string) int {
-	var ret int
-	liga := f.GetLeague()
-	player := liga.Find(name)
+	player := f.league.Find(name)
 	if player != nil {
-		ret = player.Wins
+		return player.Wins
 	}
-	return ret
+	return 0
 }
 
 //RecordWin adiciona um em Win do Player
 func (f *FileSystemPlayerStore) RecordWin(name string) {
-	liga := f.GetLeague()
-	player := liga.Find(name)
+	player := f.league.Find(name)
 	if player != nil {
 		player.Wins++
+	} else {
+		f.league = append(f.league, Player{Name: name, Wins: 1})
 	}
 
-	f.db.Seek(0, 0)
-	json.NewEncoder(f.db).Encode(liga)
+	f.database.Encode(f.league)
 }

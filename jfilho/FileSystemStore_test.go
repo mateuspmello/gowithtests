@@ -1,7 +1,6 @@
 package jfilho
 
 import (
-	"io"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -13,7 +12,7 @@ func TestFileSystemStore(t *testing.T) {
 		database, cleanDatabase := createDatabase(t)
 		defer cleanDatabase()
 
-		store := FileSystemPlayerStore{database}
+		store := NewFileSystemPlayerStore(database)
 
 		got := store.GetLeague()
 		/*sem problemas para executar duas vezes pq esta usando o ReadSeek que retorna
@@ -33,7 +32,7 @@ func TestFileSystemStore(t *testing.T) {
 		database, cleanDatabase := createDatabase(t)
 		defer cleanDatabase()
 
-		store := FileSystemPlayerStore{database}
+		store := NewFileSystemPlayerStore(database)
 
 		got := store.GetPlayerScore("Chris")
 		want := 33
@@ -45,7 +44,7 @@ func TestFileSystemStore(t *testing.T) {
 		database, cleanDatabase := createDatabase(t)
 		defer cleanDatabase()
 
-		store := FileSystemPlayerStore{database}
+		store := NewFileSystemPlayerStore(database)
 
 		store.RecordWin("Chris")
 		want := 34
@@ -53,9 +52,43 @@ func TestFileSystemStore(t *testing.T) {
 
 		assertScoreEquals(t, got, want)
 	})
+
+	t.Run("/store win for new players", func(t *testing.T) {
+		database, cleanDatabase := createDatabase(t)
+		defer cleanDatabase()
+
+		store := NewFileSystemPlayerStore(database)
+
+		store.RecordWin("Pepper")
+		want := 1
+		got := store.GetPlayerScore("Pepper")
+
+		assertScoreEquals(t, got, want)
+	})
+
+	t.Run("sorted league", func(t *testing.T) {
+		database, cleanDatabase := createDatabase(t)
+		defer cleanDatabase()
+
+		store := NewFileSystemPlayerStore(database)
+
+		got := store.GetLeague()
+
+		want := League{
+			{"Chris", 33},
+			{"Cleo", 10},
+		}
+
+		assertLeague(t, got, want)
+
+		//executando de novo
+		got = store.GetLeague()
+		assertLeague(t, got, want)
+
+	})
 }
 
-func createTempFile(t *testing.T, initialData string) (io.ReadWriteSeeker, func()) {
+func createTempFile(t *testing.T, initialData string) (*os.File, func()) {
 	t.Helper()
 
 	tmpfile, err := ioutil.TempFile("", "db")
@@ -72,7 +105,7 @@ func createTempFile(t *testing.T, initialData string) (io.ReadWriteSeeker, func(
 	return tmpfile, removefile
 }
 
-func createDatabase(t *testing.T) (io.ReadWriteSeeker, func()) {
+func createDatabase(t *testing.T) (*os.File, func()) {
 	return createTempFile(t, `[
 		{"Name": "Cleo", "Wins": 10},
 		{"Name": "Chris", "Wins": 33}]`)
