@@ -29,8 +29,6 @@ func (s *StubPlayerStore) GetLeague() League {
 	return s.league
 }
 
-const jsonContentType = "application/json"
-
 func TestLeague(t *testing.T) {
 	store := StubPlayerStore{}
 	server := NewPlayerServer(&store)

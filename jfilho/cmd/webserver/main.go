@@ -18,6 +18,8 @@ func main() {
 	}
 
 	store := jfilho.NewFileSystemPlayerStore(db)
+	store.RecordWin("Pepper")
+	store.RecordWin("Mateus")
 	server := jfilho.NewPlayerServer(store)
 
 	if err := http.ListenAndServe(":5000", server); err != nil {
